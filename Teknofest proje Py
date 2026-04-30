@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QButtonGroup
 )
 from PyQt6.QtCore import Qt, QTimer
-
+from PyQt6.QtGui import QPixmap
 class HavaSavunmaIzlemePaneli(QMainWindow):
 
     def __init__(self):
@@ -28,14 +28,38 @@ class HavaSavunmaIzlemePaneli(QMainWindow):
         self.ana_duzen = QHBoxLayout()
         self.sag_taraf = QVBoxLayout()  
 
-        self.kamera = QLabel("KAMERA")
-        self.kamera.setStyleSheet("border:2px solid green; background-color:black; color:white;")
-        self.kamera.setMinimumSize(800,500) 
-
+        self.kamera = QLabel("NO SİGNAL")
+        self.kamera.setStyleSheet("""
+        QLabel{
+        border: 2px solid #00FF41;
+        background-color: black;
+        color: #00FF41;
+        font-size: 20px;
+        }
+        """)
+        self.kamera.setMinimumSize(800,500)
         self.alt_panel = QGroupBox("SİSTEM VERİLERİ")
-        alt_layout = QHBoxLayout()
+        self.verilerLayout = QVBoxLayout()
+        self.lazer=QLabel("Lazer Gücü : ")
+        self.aktifmod=QLabel("Aktif Mod : ")
+        self.koordinat=QLabel("Koordinatlar : ")
+        self.verilerLayout.addWidget(self.lazer)
+        self.verilerLayout.addWidget(self.aktifmod)
+        self.verilerLayout.addWidget(self.koordinat)
+        self.alt_panel.setStyleSheet("""
+        QGroupBox{
+        border:2px solid #00ff41;
+        color:#00ff41;
+        }
+        QLabel{
+        color:#00ff41;
+        font-size:14px;
+        }
+""")
+    
         self.alt_panel.setMinimumHeight(100)
-        self.alt_panel.setLayout(alt_layout)
+
+        self.alt_panel.setLayout(self.verilerLayout)
 
         self.mod_grubu= QGroupBox("SİSTEM MODLARI") 
         mod_layout = QGridLayout() 
@@ -57,15 +81,16 @@ class HavaSavunmaIzlemePaneli(QMainWindow):
         mod_layout.addWidget(self.btn_otonom , 0 , 1 )
         mod_layout.addWidget(self.btn_mod1 , 1 , 0 )
         mod_layout.addWidget(self.btn_mod2, 1 , 1 )
-         
-        self.mod_grubu.setLayout(mod_layout)
-
+        self.mod_grubu.setLayout(mod_layout) 
+        # log sistemi
         self.log_sistemi = QGroupBox("LOG SİSTEMİ")
         log_layout = QVBoxLayout()
         self.olay_listesi = QListWidget()
         log_layout.addWidget(self.olay_listesi)
         self.log_sistemi.setLayout(log_layout)
-        self.log_sistemi.setMaximumHeight(200)
+        self.log_sistemi.setMaximumHeight(250)
+        self.log_sistemi.setMinimumHeight(150)
+        self.log_ekle("SİSTEM TARANIYOR")
 
         self.sag_taraf.addWidget(self.mod_grubu)
         self.sag_taraf.addWidget(self.alt_panel)
@@ -79,7 +104,7 @@ class HavaSavunmaIzlemePaneli(QMainWindow):
         #renk
 
         arka_plan = "black"
-        on_plan = "#00C800"
+        on_plan = "#00ff41"
         self.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {arka_plan};
@@ -113,61 +138,63 @@ class HavaSavunmaIzlemePaneli(QMainWindow):
                 background-color: rgb(30, 35, 45);
                 color: {on_plan};
                 border: none;
-                font-family: 'Consolas'; /* Kod ekranı gibi görünmesi için */
+                font-family: 'Consolas';  
             }}
             QLabel {{
                 color: white;
                 font-weight: bold;
             }}
-       """)
-        
+    """)
+        #arka plan
+        self.arka_plan_label = QLabel(self.merkez_widget)
+        self.arka_plan_pixmap = QPixmap("arka_plan2.png")
+        self.arka_plan_label.setPixmap(self.arka_plan_pixmap)
+        self.arka_plan_label.setScaledContents(True)
+        #karartma
+        self.overlay = QLabel(self.merkez_widget)
+        self.overlay.setStyleSheet("background-color: rgba(0, 0, 0, 60);")
+
+        self.overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        #baslangıc boyutları
+        self.arka_plan_label.setGeometry(self.merkez_widget.rect())
+        self.overlay.setGeometry(self.merkez_widget.rect())
+
+        self.arka_plan_label.lower()
+        self.overlay.raise_()
         #zamanlayıcı
         self.zamanlayici = QTimer()
         self.zamanlayici.timeout.connect(self.verileri_guncelle)
-        self.zamanlayici.start(10000)
-      
+        self.zamanlayici.start(2000)
+    
         # buton kontrolu
-
-        self.btn_manuel.clicked.connect(self.manuel_tiklandi)
-        self.btn_otonom.clicked.connect(self.otonom_tiklandi)
-        self.btn_mod1.clicked.connect(self.mod1_tiklandi)
-        self.btn_mod2.clicked.connect(self.mod2_tiklandi)
-
         self.mod_mantigi = QButtonGroup()
         self.mod_mantigi.addButton(self.btn_manuel)
         self.mod_mantigi.addButton(self.btn_otonom)
         self.mod_mantigi.addButton(self.btn_mod1)
         self.mod_mantigi.addButton(self.btn_mod2)
         self.mod_mantigi.setExclusive(True)
+        self.mod_mantigi.buttonClicked.connect(self.mod_degisti)
+        
+    def mod_degisti(self, button):
+        self.log_ekle(f"MOD DEĞİŞTİ : {button.text()}")
 
-    def verileri_guncelle(self):
-        self.olay_listesi.addItem("SİSTEM TARANIYOR...")
+    def log_ekle(self,mesaj):
+        self.olay_listesi.addItem(mesaj)
+        if self.olay_listesi.count()>200:
+            self.olay_listesi.takeItem(0)
         self.olay_listesi.scrollToBottom()
 
-    def manuel_tiklandi(self):
-        if self.btn_manuel.isChecked():
-            self.olay_listesi.addItem("MOD: MANUEL")
-        
-    def otonom_tiklandi(self):
-        if self.btn_otonom.isChecked():
-            self.olay_listesi.addItem("MOD: OTONOM")
-       
-    def mod2_tiklandi(self):
-        if self.btn_mod2.isChecked():
-            self.olay_listesi.addItem("MOD 2: YÜKSEK İRTİFA")
-        
-    def mod1_tiklandi(self):
-        if not self.btn_mod1.isChecked():
-            self.olay_listesi.addItem("MOD 1: HEDEF ODAKLI")
-              
+    def verileri_guncelle(self):
+        self.log_ekle("SİSTEM TARANIYOR")
+
+    def resizeEvent(self,event):
+        self.arka_plan_label.setGeometry(self.merkez_widget.rect())
+        self.overlay.setGeometry(self.merkez_widget.rect())
+        super().resizeEvent(event)
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    pencere = HavaSavunmaIzlemePaneli() # Sınıf ismin neyse onu yazmalısın
-    
+
+    pencere = HavaSavunmaIzlemePaneli()
     pencere.show()
-    
+
     sys.exit(app.exec())
-
-
-    
