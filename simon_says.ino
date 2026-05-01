@@ -9,13 +9,13 @@ void setup(){
   }
   pinMode(13, OUTPUT);
   randomSeed(analogRead(0));
-  random();
+  randomize();
   precdict();
 }
 void loop(){ 
   
 }
-void random(){
+void randomize(){
   for (int i=0;i<5;i++){
     int index=random(0,5);
     memory[i]=randomled[index];
